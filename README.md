@@ -1,4 +1,5 @@
 ## 1 RMCMD-远程控制、登录、传输便携终端管理器
+> 更多远程，更多简单！
 
 单机跑一个程序 、部署一个安装包都是非常简答的工作，可是当你的代码需要在足够多的目标机运行的时候，痛点就来了，他们有可能是：
 
@@ -15,7 +16,15 @@ RMCMD便是我对于自己日常工作中遇到的这个问题的一个解答，
 
 远程控制指令演示:
 ```shell script
-rmc cmd --index=7 --value="docker exec -i 8bd4dd7ef18a /bin/bash -c 'cd /root/simulator/python;pwd;./func-simu-client.py list-id'"
+#### 01-初始命令-这里还有一个关键-首先需要进入目标容器id信息
+ssh root@192.168.1.1 "docker exec -i 8bd4dd7ef18a /bin/bash -c 'cd /root/test;pwd;./testcmd'"
+#### 02-远程登录简化ip如下所示
+rmc cmd --index=7 --value="docker exec -i 8bd4dd7ef18a /bin/bash -c 'cd /root/test;pwd;./testcmd'"
+#### 03-有可能你觉得这个命令有点长通过配置文件配置docker关键词后可以简化为
+rmc dockercmd --index=7 --value="./testcmd"
+#### 04-换成一次性执行100台主机
+rmc dockercmd --all --value="./testcmd"
+#### 这个工具的目标是--机器愈多，使用越简单！
 ```
 
 
