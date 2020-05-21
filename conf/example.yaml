@@ -1,0 +1,26 @@
+####远程服务器管理配置文件，可以在conf目录定制多组针对不同环境的配置文件，通过reload选项进行灵活加载和使用
+remote-server-configs:
+  ##容器操作选项--拥有该配置，可以直接使用dockercmd选项进入容器关键词的bash内部进行操作
+  dockerbash:
+    container-key: "yunnan_moni:1.0"
+    container-dir: "/root/simulator/python/"
+  ##远程服务器列表
+  remote-list:
+    ####索引
+    - index: 0
+      ####描述信息-必填
+      detail: "远程主机1"
+      ####地址信息-必填
+      addr: "10.33.33.46"
+      ####密码信息-【选填】
+      passwd: ""
+      ####工作路径-【选填】
+      workdir: "/root/"
+      ####容器工作路径-【选填】
+      dockerlogin: "/root/"
+    - index: 1
+      detail: "远程主机2"
+      addr: "10.33.33.22"
+      passwd: ""
+#      workdir: "/root/"
+#      dockerlogin: "/root/"

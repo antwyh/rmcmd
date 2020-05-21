@@ -21,6 +21,6 @@ usage()
 EOF
 echo -e "\033[0m"
 }
-rmcmd_path=/Users/fwd/03-fwd_git/06-fly-higher-in-python/03-remote-cotroll
+rmcmd_path=/Users/fwd/03-fwd_git/07-rmcmd
 cd $rmcmd_path
-./remote-controll.py "$@"
+./rmc.py "$@"

@@ -4,16 +4,16 @@
 """multi-simu-client
     this is grpc test-case simulator client!
 Usage:
-    remote-control install
-    remote-control copyid [--index=<id>]
-    remote-control reload
-    remote-control list
-    remote-control login  [--index=<id>]
-    remote-control state [--index=<id>] [--all] [--sum]
-    remote-control dockercmd  [--index=<id>] [--all] [--value=<cmdstr>] [--dockerkey=<key>] [--workdir=<workdir>]
-    remote-control cmd  [--index=<id>] [--all] [--value=<cmdstr>]
-    remote-control scp [--reverse] [--index=<id>] [--all] [--file=<filename>] [--dir=<dirname>] [--dstpath=<dstpath>]
-    remote-control (-h | --help) [--skip]
+    rmc install
+    rmc copyid [--index=<id>]
+    rmc reload
+    rmc list
+    rmc login  [--index=<id>]
+    rmc state [--index=<id>] [--all] [--sum]
+    rmc dockercmd  [--index=<id>] [--all] [--value=<cmdstr>] [--dockerkey=<key>] [--workdir=<workdir>]
+    rmc cmd  [--index=<id>] [--all] [--value=<cmdstr>]
+    rmc scp [--reverse] [--index=<id>] [--all] [--file=<filename>] [--dir=<dirname>] [--dstpath=<dstpath>]
+    rmc (-h | --help) [--skip]
 Arguments:
     FILE                the files
 Options:
@@ -31,9 +31,9 @@ Options:
     --reverse                 scp remote to local
 Examples:
     a0-查看本地配置:
-        查看本地配置: remote-controll.py list
+        查看本地配置: rmc.py list
     a1-远程执行命令:
-        批量执行所有命令: remote-controll.py cmd --all
+        批量执行所有命令: rmc.py cmd --all
 Tips:
     input the right value
 """
@@ -52,7 +52,7 @@ from libcode.RemoteYamlUtils import RemoteServerDetails, RemoteServerDockerDetai
 from libcode.RemoteYamlUtils import YamlUtils
 from libcode.CheckAndTips import CheckAndTips
 from libcode.FileUtils import FileUtils
-logger=LoggerUtils.createLogger(__name__, "log/remote-controll.log")
+logger=LoggerUtils.createLogger(__name__, "log/rmc.log")
 
 def toScpCmd(addr, fileName=None, dirName=None, reverseDirection=False, dstPath=""):
     cmdstr = ""
@@ -239,7 +239,7 @@ class RemoteControlOption:
 
 if __name__ == '__main__':
     arguments = docopt(__doc__, version='2.0.0')
-    CmdLogger.logCmd(arguments, './remote-controll.py')
+    CmdLogger.logCmd(arguments, './rmc.py')
     if arguments['install']:
         workdir = os.getcwd()
         CheckAndTips.printYellow("[提示] 系统将直接进行远程控制安装设置与检查:" + workdir)
