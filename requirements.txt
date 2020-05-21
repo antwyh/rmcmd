@@ -1,0 +1,6 @@
+docopt==0.6.2
+PyYAML==5.3.1
+prettytable==0.7.2
+#grpcio==1.27.2
+#grpcio-tools==1.27.2
+#protobuf==3.11.3
