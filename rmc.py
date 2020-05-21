@@ -278,10 +278,12 @@ if __name__ == '__main__':
             index=int(id)
             simulator = remotes[index]
             CheckAndTips.printYellow("[提示]将远程登录如下ip: " + simulator.addr)
-            cmdprefix = "ssh -t root@" + str(simulator.addr) + " \' cd {0}; bash\'".format(simulator.workdir)
+            cmdprefix = "ssh root@" + str(simulator.addr)
+            #### todo:-t方式登录会使得一些系统变量生效，此处需要优化
+            #cmdprefix = "ssh -t root@" + str(simulator.addr) + " \'source ~/.bashrc; cd {0}; bash\'".format(simulator.workdir)
             if (simulator.dockerlogin != ''):
                 print(simulator.dockerlogin)
-                cmdprefix="ssh -t root@" + str(simulator.addr) + " \'{0}; bash\'".format(simulator.dockerlogin)
+                cmdprefix="ssh root@" + str(simulator.addr) + " \'{0}; bash\'".format(simulator.dockerlogin)
             os.system(cmdprefix)
     #######################################
     elif arguments['cmd']:
