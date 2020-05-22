@@ -273,7 +273,7 @@ if __name__ == '__main__':
         id = arguments['--index']
         if id is None:
             RemoteControlOption.listRemoteControllers(remotes=remotes, cmdStr="登录列表展示")
-            CheckAndTips.printRed("[提示] 请输入./remote-cotroll.py login --index=[index] 登录指定服务器")
+            CheckAndTips.printRed("[提示] 请输入rmc login --index=[index] 登录指定服务器")
         else:
             index=int(id)
             simulator = remotes[index]

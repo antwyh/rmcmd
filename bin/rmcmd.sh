@@ -17,7 +17,7 @@ usage()
  ##----------------
  cat <<EOF
     [提示] 请打开如下目录 /Users/fwd/03-fwd_git/06-fly-higher-in-python/03-remote-cotroll
-    [提示] 输入./remote-controll.py查看帮助
+    [提示] 输入rmc.py查看帮助
 EOF
 echo -e "\033[0m"
 }
