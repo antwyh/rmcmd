@@ -8,20 +8,22 @@ Usage:
     rmc copyid [--index=<id>]
     rmc reload
     rmc list
-    rmc login  [--index=<id>]
-    rmc state [--index=<id>] [--all] [--sum]
-    rmc dockercmd  [--index=<id>] [--all] [--value=<cmdstr>] [--dockerkey=<key>] [--workdir=<workdir>]
-    rmc cmd  [--index=<id>] [--all] [--value=<cmdstr>]
-    rmc scp [--reverse] [--index=<id>] [--all] [--file=<filename>] [--dir=<dirname>] [--dstpath=<dstpath>]
+    rmc login  [--index=<id>] --todir
+    rmc state [--index=<id>] [--all] [--range=<range>] [--sum]
+    rmc dockercmd  [--index=<id>] [--all] [--range=<range>] [--value=<cmdstr>] [--dockerkey=<key>] [--workdir=<workdir>]
+    rmc cmd  [--index=<id>] [--all] [--range=<range>] [--value=<cmdstr>]
+    rmc scp [--reverse] [--index=<id>] [--all] [--range=<range>] [--file=<filename>] [--dir=<dirname>] [--dstpath=<dstpath>]
     rmc (-h | --help) [--skip]
 Arguments:
     FILE                the files
 Options:
     --file-path=<filepath> 加载文件路径
-    --index=<id>     from config file index
-    --skip          skip for check ip
-    --all          show all state
+    --index=<id>      from config file index
+    --skip            skip for check ip
+    --all             show all state
+    --range=<range>   range index with all
     --sum          show sub sum state
+    --todir        to the dst dir
     --value=<cmdstr>          cmd for remote ctr
     --file=<filename>         local file name
     --dir=<dirname>           local dir name
@@ -256,7 +258,21 @@ if __name__ == '__main__':
     ####print("-----> 从./current-conf-file读取当前使用配置文件:", filename)
     utils = YamlUtils()
     dockerConfigs=RemoteServerDockerDetails.readRemoteServerDockerDetails(filename)
-    remotes = RemoteServerDetails.listRemoteSimulators(filename)
+    remotesValues = RemoteServerDetails.listRemoteSimulators(filename)
+    remotes = []
+    rangestr = arguments['--range']
+    if rangestr is not None and rangestr != "" and "-" in rangestr:
+        start = int(rangestr.split("-")[0])
+        end  = int(rangestr.split("-")[1])
+        CheckAndTips.printGreen("[提示] 选定一定范围索引, -起始:" + str(start) + "-结束:" + str(end))
+        index=0
+        for remote in remotesValues:
+            if index < start: index+=1; continue
+            elif index > end: break
+            else: index+=1; remotes.append(remote); continue
+    else:
+        remotes.extend(remotesValues)
+
     remoteControlOp = RemoteControlOption(arguments, remotes=remotes)
     #######################################
     if arguments['copyid']:
@@ -279,8 +295,9 @@ if __name__ == '__main__':
             simulator = remotes[index]
             CheckAndTips.printYellow("[提示]将远程登录如下ip: " + simulator.addr)
             cmdprefix = "ssh root@" + str(simulator.addr)
+            if (arguments['--todir']):
+                cmdprefix = "ssh -t root@" + str(simulator.addr) + " \'source ~/.bashrc; cd {0}; bash\'".format(simulator.workdir)
             #### todo:-t方式登录会使得一些系统变量生效，此处需要优化
-            #cmdprefix = "ssh -t root@" + str(simulator.addr) + " \'source ~/.bashrc; cd {0}; bash\'".format(simulator.workdir)
             if (simulator.dockerlogin != ''):
                 print(simulator.dockerlogin)
                 cmdprefix="ssh root@" + str(simulator.addr) + " \'{0}; bash\'".format(simulator.dockerlogin)
