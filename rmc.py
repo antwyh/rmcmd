@@ -5,14 +5,17 @@
     this is grpc test-case simulator client!
 Usage:
     rmc install
-    rmc copyid [--index=<id>]
+    rmc copyid [--index=<id>] [--all]
     rmc reload
     rmc list
-    rmc login  [--index=<id>] --todir
+    rmc login  [--index=<id>] [--todir]
     rmc state [--index=<id>] [--all] [--range=<range>] [--sum]
     rmc dockercmd  [--index=<id>] [--all] [--range=<range>] [--value=<cmdstr>] [--dockerkey=<key>] [--workdir=<workdir>]
     rmc cmd  [--index=<id>] [--all] [--range=<range>] [--value=<cmdstr>]
     rmc scp [--reverse] [--index=<id>] [--all] [--range=<range>] [--file=<filename>] [--dir=<dirname>] [--dstpath=<dstpath>]
+    rmc switch [--index=<id>] [--all] [--file=<filename>] [--roomvid=<roomvid>] [--autoadd=<number>]
+    rmc install-docker [--index=<id>] [--all] [--file=<filename>]
+    rmc debug [--index=<id>] [--all]
     rmc (-h | --help) [--skip]
 Arguments:
     FILE                the files
@@ -31,6 +34,9 @@ Options:
     --dockerkey=<key>         docker key value
     --workdir=<workdir>       docker work dir
     --reverse                 scp remote to local
+    --addnum=<addnum>         id add num
+    --roomvid=<roomvid>       roomvid
+    --autoadd=<number>        autoadd num
 Examples:
     a0-查看本地配置:
         查看本地配置: rmc.py list
@@ -54,7 +60,10 @@ from libcode.RemoteYamlUtils import RemoteServerDetails, RemoteServerDockerDetai
 from libcode.RemoteYamlUtils import YamlUtils
 from libcode.CheckAndTips import CheckAndTips
 from libcode.FileUtils import FileUtils
+from libcode.SimulaterEx import SimulaterOpClass
 logger=LoggerUtils.createLogger(__name__, "log/rmc.log")
+import traceback
+
 
 def toScpCmd(addr, fileName=None, dirName=None, reverseDirection=False, dstPath=""):
     cmdstr = ""
@@ -241,7 +250,7 @@ class RemoteControlOption:
 
 if __name__ == '__main__':
     arguments = docopt(__doc__, version='2.0.0')
-    CmdLogger.logCmd(arguments, './rmc.py')
+    CmdLogger.logCmd(arguments, 'rmc.py')
     if arguments['install']:
         workdir = os.getcwd()
         CheckAndTips.printYellow("[提示] 系统将直接进行远程控制安装设置与检查:" + workdir)
@@ -300,7 +309,7 @@ if __name__ == '__main__':
             #### todo:-t方式登录会使得一些系统变量生效，此处需要优化
             if (simulator.dockerlogin != ''):
                 print(simulator.dockerlogin)
-                cmdprefix="ssh root@" + str(simulator.addr) + " \'{0}; bash\'".format(simulator.dockerlogin)
+                cmdprefix="ssh -t root@" + str(simulator.addr) + " \'{0}; bash\'".format(simulator.dockerlogin)
             os.system(cmdprefix)
     #######################################
     elif arguments['cmd']:
@@ -313,3 +322,64 @@ if __name__ == '__main__':
             remoteControlOp.processDockerRemoteCmd()
         else:
             remoteControlOp.processDockerRemoteCmd(dockerkey=dockerConfigs.dockerkey, workdirstr=dockerConfigs.workdir)
+    elif arguments['switch']:
+        configFile = arguments['--file']
+        if configFile is None: dstPath = ""
+        roomvid = arguments['--roomvid']
+        if roomvid is None: roomvid = ""
+        addnum=60
+        autonum = arguments['--autoadd']
+        if autonum is not None and autonum != "":
+            addnum=int(autonum)
+
+        CheckAndTips.printGreen("[提示]远程执行配置文件切换")
+        simulaterop = SimulaterOpClass()
+        if (roomvid is not None and roomvid != ""):
+            startRoomVid = int(roomvid)
+        if arguments['--all']:
+            index=0;
+            for simulator in remotes:
+                try:
+                    cmdprefix = "ssh root@" + str(simulator.addr) + " "
+                    CheckAndTips.printYellow(
+                        "===========================================================\n"
+                        "[提示] 开始进行远程配置文件切换， 索引:" + str(index))
+                    if(roomvid is not None and roomvid != ""):
+                        simulaterop.switchConfigs(index=index, ipaddr=simulator.addr, filepath=configFile,
+                                                  startRoomVid=startRoomVid, startPlaceId=startRoomVid, addNum=addnum)
+                        startRoomVid += addnum;
+                    else:
+                        simulaterop.switchConfigs(index=index, ipaddr=simulator.addr, filepath=configFile)
+                    index+=1
+                except Exception as e:
+                    traceback.print_exc()
+                    CheckAndTips.printRed("[错误] 替换配置文件失败: " + simulator.addr)
+                    CheckAndTips.printRed("\n\n\n")
+        else:
+            index=0
+            id = arguments['--index']
+            if id is not None:
+                index= int(id)
+            try:
+                simulator = remotes[index]
+                CheckAndTips.printYellow("===========================================================\n"
+                                         "[提示] 开始进行远程配置文件切换， 索引:" + str(index))
+                if (roomvid is not None and roomvid != ""):
+                    simulaterop.switchConfigs(index=index, ipaddr=simulator.addr, filepath=configFile,
+                                              startRoomVid=startRoomVid, startPlaceId=startRoomVid, addNum=addnum)
+                    startRoomVid += 60;
+                else:
+                    simulaterop.switchConfigs(index=index, ipaddr=simulator.addr, filepath=configFile)
+            except Exception as e:
+                traceback.print_exc()
+                CheckAndTips.printRed("[错误] 替换配置文件失败: " + simulator.addr)
+                CheckAndTips.printRed("\n\n\n")
+
+    elif arguments['install-docker']:
+        CheckAndTips.printGreen("[提示]远程进行容器安装")
+        simulaterop = SimulaterOpClass()
+        simulaterop.installSimulator()
+    elif arguments['debug']:
+        CheckAndTips.printGreen("[提示] 远程容器传输安装包")
+        simulaterop = SimulaterOpClass()
+        simulaterop.installPython()

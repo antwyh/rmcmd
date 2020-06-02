@@ -25,6 +25,9 @@ rmc dockercmd --index=7 --value="./testcmd"
 #### 04-换成一次性执行100台主机
 rmc dockercmd --all --value="./testcmd"
 #### 这个工具的目标是--机器愈多，使用越简单！
+
+rmc switch  --file=./file/core-example.yaml --all --roomvid=10000000 --autoadd=60
+rmc switch  --file=./file/core-example.yaml --index=1 --roomvid=10000000 --autoadd=60
 ```
 
 

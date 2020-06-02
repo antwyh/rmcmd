@@ -1,0 +1,20 @@
+remote-server-configs:
+  dockerbash:
+    container-key: "yunnan_moni:1.0"
+    container-dir: "/root/simulator/python/"
+  remote-list:
+    - index: 0
+      detail: "local-simulator-fwding"
+      addr: "172.20.34.221"
+      passwd: " "
+      workdir: "/root/simulator/python/"
+    - index: 1
+      detail: "local-simulator-fwding"
+      addr: "172.20.34.221"
+      passwd: " "
+      workdir: "/root/simulator/python/"
+    - index: 2
+      detail: "local-simulator-fwding"
+      addr: "172.20.34.221"
+      passwd: " "
+      workdir: "/root/simulator/python/"
