@@ -26,6 +26,6 @@ echo "$pathstr"
 replacestr="rmcmd_path=$pathstr"
 sed -i "s;^rmcmd_path=.*;${replacestr};g" rmcmd.sh
 cat rmcmd.sh
-cp rmcmd.sh ~/bin/rmc
+cp rmcmd.sh /usr/bin/rmc
 echo "安装完成,可以直接输入 rmc 进行操作"
 

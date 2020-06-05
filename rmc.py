@@ -9,13 +9,17 @@ Usage:
     rmc reload
     rmc list
     rmc login  [--index=<id>] [--todir]
-    rmc state [--index=<id>] [--all] [--range=<range>] [--sum]
     rmc dockercmd  [--index=<id>] [--all] [--range=<range>] [--value=<cmdstr>] [--dockerkey=<key>] [--workdir=<workdir>]
-    rmc cmd  [--index=<id>] [--all] [--range=<range>] [--value=<cmdstr>]
+    rmc cmd  [--index=<id>] [--all] [--range=<range>] [--value=<cmdstr>] [--future]
     rmc scp [--reverse] [--index=<id>] [--all] [--range=<range>] [--file=<filename>] [--dir=<dirname>] [--dstpath=<dstpath>]
     rmc switch [--index=<id>] [--all] [--file=<filename>] [--roomvid=<roomvid>] [--autoadd=<number>]
     rmc install-docker [--index=<id>] [--all] [--file=<filename>]
     rmc debug [--index=<id>] [--all]
+    rmc install-docker [--index=<id>] [--all] [--scp] [--install] [--uninstall] [--check] [--future]
+    rmc tarself
+    rmc pullself
+    rmc ynclear
+    rmc rm-docker
     rmc (-h | --help) [--skip]
 Arguments:
     FILE                the files
@@ -37,21 +41,36 @@ Options:
     --addnum=<addnum>         id add num
     --roomvid=<roomvid>       roomvid
     --autoadd=<number>        autoadd num
+    --future                  concurrent way to execute
+    --scp                     scp moni tar
+    --install                 install tar
+    --uninstall               removte tar and contanier
 Examples:
-    a0-查看本地配置:
+    0-查看本地配置:
         查看本地配置: rmc.py list
-    a1-远程执行命令:
+    1-远程执行命令:
         批量执行所有命令: rmc.py cmd --all
+    2-切换配置文件
+        rmc switch  --file=./file/core-example.yaml --all --roomvid=10000000 --autoadd=60
+        rmc switch  --file=./file/core-example.yaml --index=1 --roomvid=10000000 --autoadd=70
+        rmc switch  --file=./file/core-xylink.yaml --index=0 --roomvid=11010001 --autoadd=70
+    3-yunnan清空模拟器环境
+        rmc ynclear
+    4-批量查看状态
+        rmc dockercmd --all --value="./func-simu-client.py state"
+    5-云南环境换包
+        rmc debug --index=0
+        rmc debug --all
 Tips:
     input the right value
 """
 from docopt import docopt
 import os
 import socket
-import datetime
+from datetime import datetime
 import time
 import sys
-
+from concurrent import futures
 from prettytable import PrettyTable
 
 from libcode.LoggerUtils import LoggerUtils
@@ -63,7 +82,8 @@ from libcode.FileUtils import FileUtils
 from libcode.SimulaterEx import SimulaterOpClass
 logger=LoggerUtils.createLogger(__name__, "log/rmc.log")
 import traceback
-
+from multiprocessing  import Process
+MAX_WORKERS = 20
 
 def toScpCmd(addr, fileName=None, dirName=None, reverseDirection=False, dstPath=""):
     cmdstr = ""
@@ -121,6 +141,9 @@ class RemoteControlOption:
             except Exception as e:
                 CheckAndTips.printRed("[错误] 执行复制秘钥命令失败，请检查配置- " + simulator.addr)
                 CheckAndTips.printRed("\n\n\n")
+    @staticmethod
+    def sysExcute(cmd):
+        os.system(cmd)
     ####执行远程命令
     def processRemoteCmd(self):
         cmdstr = self.arguments['--value']
@@ -130,15 +153,28 @@ class RemoteControlOption:
         elif cmdstr == "ssh":
             cmd = " "
         if self.arguments['--all']:
+            starttime=datetime.utcnow().strftime('%Y-%m-%d-%H:%M:%S.%f')[:-3]
+            #with futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
             for simulator in self.remotes:
                 try:
                     cmdprefix = "ssh root@" + str(simulator.addr) + " "
                     actualCmd = cmdprefix + "\"" + cmd + "\""
                     CheckAndTips.printYellow("[提示]执行远程命令:" + cmd + " 描述:" + simulator.addr)
-                    os.system(actualCmd)
+                    if (not self.arguments['--future']):
+                        os.system(actualCmd)
+                    else:
+                        # Start the load operations and mark each future with its URL
+                        CheckAndTips.printYellow("[提示] 异步执行命令" + actualCmd)
+                        #executor.submit(RemoteControlOption.sysExcute, actualCmd)
+                        ps = Process(target=RemoteControlOption.sysExcute, args=(actualCmd,))
+                        print("---》##### ps pid: " + str(ps.pid) + ", ident:" + str(ps.ident))
+                        ps.start()
+
                 except Exception as e:
                     CheckAndTips.printRed("[错误] 执行远程命令失败，请检查ssh配置- " + simulator.addr)
                     CheckAndTips.printRed("\n\n\n")
+            print("--start:", starttime)
+            print("----end:", datetime.utcnow().strftime('%Y-%m-%d-%H:%M:%S.%f')[:-3])
         else:
             index=0
             id = self.arguments['--index']
@@ -285,7 +321,7 @@ if __name__ == '__main__':
     remoteControlOp = RemoteControlOption(arguments, remotes=remotes)
     #######################################
     if arguments['copyid']:
-        CheckAndTips.printGreen("[提示1] 生成秘钥:ssh-keygen")
+        CheckAndTips.printGreen("[提示1] 生成秘钥:ssh-keygen  安装copy工具：yum -y install openssh-clients")
         CheckAndTips.printGreen("[提示2] 公钥上传:ssh-copy-id -i ~/.ssh/id_rsa.pub root@服务器ip")
         remoteControlOp.processRemoteCopySshId()
         exit(1)
@@ -340,10 +376,9 @@ if __name__ == '__main__':
             index=0;
             for simulator in remotes:
                 try:
-                    cmdprefix = "ssh root@" + str(simulator.addr) + " "
                     CheckAndTips.printYellow(
                         "===========================================================\n"
-                        "[提示] 开始进行远程配置文件切换， 索引:" + str(index))
+                        "[提示] 开始进行批量容器操作， 索引:" + str(index) + " 地址:" + simulator.addr)
                     if(roomvid is not None and roomvid != ""):
                         simulaterop.switchConfigs(index=index, ipaddr=simulator.addr, filepath=configFile,
                                                   startRoomVid=startRoomVid, startPlaceId=startRoomVid, addNum=addnum)
@@ -374,12 +409,97 @@ if __name__ == '__main__':
                 traceback.print_exc()
                 CheckAndTips.printRed("[错误] 替换配置文件失败: " + simulator.addr)
                 CheckAndTips.printRed("\n\n\n")
-
+##############################################
     elif arguments['install-docker']:
+        CheckAndTips.printGreen("[提示] 远程下载地址：wget http://devcdn.xylink.com/private_cloud/v3.8/deploy/1%2bN/yunnan.tar.gz")
         CheckAndTips.printGreen("[提示]远程进行容器安装")
-        simulaterop = SimulaterOpClass()
-        simulaterop.installSimulator()
+        if arguments['--all']:
+            index=0;
+            for simulator in remotes:
+                try:
+                    cmdprefix = "ssh root@" + str(simulator.addr) + " "
+                    CheckAndTips.printYellow(
+                        "===========================================================\n"
+                        "[提示] 开始进行远程容器传输python安装包， 索引:" + str(index))
+                    if (not arguments['--future']):
+                        SimulaterOpClass().processSimulatorWork(index=index, ipaddr=simulator.addr,
+                                                                isCheck=arguments['--check'], isScp=arguments['--scp'],
+                                                                isUninstall=arguments['--uninstall'],
+                                                                isInstall=arguments['--install'])
+                    else:
+                        # Start the load operations and mark each future with its URL
+                        CheckAndTips.printYellow("[提示] 异步执行命令")
+                        #executor.submit(RemoteControlOption.sysExcute, actualCmd)
+                        ps = Process(target=SimulaterOpClass().processSimulatorWorkFuc, args=(index, simulator.addr, "~/yunnan.tar.gz",
+                                                                arguments['--check'], arguments['--scp'],
+                                                                arguments['--uninstall'],
+                                                                arguments['--install']))
+                        print("---》##### ps pid: " + str(ps.pid) + ", ident:" + str(ps.ident))
+                        ps.start()
+                    index+=1
+                except Exception as e:
+                    traceback.print_exc()
+                    CheckAndTips.printRed("[错误] 替换配置文件失败: " + simulator.addr)
+                    CheckAndTips.printRed("\n\n\n")
+        else:
+            index=0
+            id = arguments['--index']
+            if id is not None:
+                index= int(id)
+            try:
+                simulator = remotes[index]
+                SimulaterOpClass().processSimulatorWork(index=index, ipaddr=simulator.addr,
+                                     isCheck=arguments['--check'], isScp=arguments['--scp'],
+                                     isUninstall=arguments['--uninstall'], isInstall=arguments['--install'])
+            except Exception as e:
+                traceback.print_exc()
+                CheckAndTips.printRed("[错误] 替换配置文件失败: " + simulator.addr)
+                CheckAndTips.printRed("\n\n\n")
+
+
+##############################################
     elif arguments['debug']:
-        CheckAndTips.printGreen("[提示] 远程容器传输安装包")
-        simulaterop = SimulaterOpClass()
-        simulaterop.installPython()
+        CheckAndTips.printGreen("[提示] 远程容器传输python安装包")
+        if arguments['--all']:
+            index=0;
+            for simulator in remotes:
+                try:
+                    cmdprefix = "ssh root@" + str(simulator.addr) + " "
+                    CheckAndTips.printYellow(
+                        "===========================================================\n"
+                        "[提示] 开始进行远程容器传输python安装包， 索引:" + str(index))
+                    simulaterop = SimulaterOpClass()
+                    simulaterop.installSimulatorTarForSignal(index=index)
+                    index+=1
+                except Exception as e:
+                    traceback.print_exc()
+                    CheckAndTips.printRed("[错误] 替换配置文件失败: " + simulator.addr)
+                    CheckAndTips.printRed("\n\n\n")
+        else:
+            index=0
+            id = arguments['--index']
+            if id is not None:
+                index= int(id)
+            try:
+                simulator = remotes[index]
+                CheckAndTips.printYellow("===========================================================\n"
+                        "[提示] 开始进行远程容器传输python安装包， 索引:" + str(index))
+                simulaterop = SimulaterOpClass()
+                simulaterop.installSimulatorTarForSignal(index=index)
+            except Exception as e:
+                traceback.print_exc()
+                CheckAndTips.printRed("[错误] 替换配置文件失败: " + simulator.addr)
+                CheckAndTips.printRed("\n\n\n")
+
+    elif arguments['tarself']:
+        os.system("cp /Users/fwd/01-Code/edusimulatorclient/rpmbuild/simulator-1.0-SNAPSHOT.tar ./; ls -l simulator-1.0-SNAPSHOT.tar;"
+                  "cd ../; tar cf rmc.tar.gz 07-rmcmd/; ls -l rmc.tar.gz")
+        cmd1 = "ossutil64 cp -f /tmp/rmc.tar.gz oss://ainemodevcn/private_cloud/v3.8/deploy/1+N/"
+        cmdstr="cd ../; scp rmc.tar.gz root@172.18.225.112:/tmp/; ssh root@172.18.225.112 \"{0} \"".format(cmd1)
+        CheckAndTips.printYellow("[提示] 执行如下命令：" + cmdstr)
+        os.system(cmdstr)
+
+    elif arguments['pullself']:
+        os.system("")
+    elif arguments['ynclear']:
+        os.system("rmc dockercmd --all --value=\"../simu-bin/clear-media-recv\"")
